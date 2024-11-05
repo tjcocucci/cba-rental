@@ -1,7 +1,11 @@
-import numpy as np
+import os
 import re
 import cloudscraper
 from bs4 import BeautifulSoup
+from database import DataBaseClient
+from geolocator import GeoLocator
+
+MONGO_URL = "mongodb://root:rootpassword@localhost:27017/"
 
 PAGE_URL_SUFFIX = "-pagina-"
 HTML_EXTENSION = ".html"
@@ -43,6 +47,8 @@ DATA_COLUMNS = [
     "bedrooms",
     "bathrooms",
     "parking",
+    "latitude",
+    "longitude",
 ]
 
 
@@ -50,6 +56,8 @@ class Scraper:
     def __init__(self, base_url):
         self.base_url = base_url
         self.data_filename = "data.csv"
+        self.db_client = DataBaseClient(MONGO_URL)
+        self.geolocator = GeoLocator()
         with open(self.data_filename, "w") as file:
             file.write(",".join(DATA_COLUMNS) + "\n")
 
@@ -75,7 +83,8 @@ class Scraper:
 
             for post in properties_posts:
                 poperty_data = self.get_property_data_from_post(post)
-                self.save_data_row_to_csv(poperty_data)
+                if poperty_data:
+                    self.save_data_row_to_csv(poperty_data)
 
             previous_posts = properties_posts
             page_number += 1
@@ -96,14 +105,26 @@ class Scraper:
             data_row = ",".join([str(value) for value in ordered_data])
             file.write(data_row + "\n")
 
+    def is_zp_id_in_db(self, zp_id):
+        """
+        Check if the zp_id is already in the MongoDB database.
+        """
+        return self.db_client.collection.find_one({"zp_id": zp_id}) is not None
+
     def get_property_data_from_post(self, post):
         data = {}
         data["zp_id"] = self.get_zp_id(post)
+        if self.is_zp_id_in_db(data["zp_id"]):
+            return None
+
         data |= self.get_price(post, "rental_data")
         data |= self.get_price(post, "expenses_data")
         data["address"] = self.extract_text(post, "address")
         data["location"] = self.extract_text(post, "location")
         data |= self.get_features(post)
+        data |= self.geolocator.get_coordinates(
+            data["address"] + " " + data["location"]
+        )
         return data
 
     def get_zp_id(self, post):
