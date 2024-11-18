@@ -1,6 +1,7 @@
 import os
 import re
 import cloudscraper
+import datetime
 from bs4 import BeautifulSoup
 from database import DataBaseClient
 from geolocator import GeoLocator
@@ -36,6 +37,7 @@ CURRENCY_DICT = {
 
 DATA_COLUMNS = [
     "zp_id",
+    "scraped_at",
     "rental_data_price",
     "rental_data_currency",
     "expenses_data_price",
@@ -55,10 +57,12 @@ DATA_COLUMNS = [
 class Scraper:
     def __init__(self, base_url):
         self.base_url = base_url
-        self.data_filename = "data.csv"
+        self.data_filename = f"data_csvs/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_data.csv"
         self.db_client = DataBaseClient(MONGO_URL)
         self.geolocator = GeoLocator()
-        with open(self.data_filename, "w") as file:
+        if not os.path.exists("data_csvs"):
+            os.makedirs("data_csvs")
+        with open(self.data_filename, "w+") as file:
             file.write(",".join(DATA_COLUMNS) + "\n")
 
     def scrap_all_pages(self):
@@ -85,6 +89,7 @@ class Scraper:
                 poperty_data = self.get_property_data_from_post(post)
                 if poperty_data:
                     self.save_data_row_to_csv(poperty_data)
+                    self.upsert_property(poperty_data)
 
             previous_posts = properties_posts
             page_number += 1
@@ -113,6 +118,7 @@ class Scraper:
 
     def get_property_data_from_post(self, post):
         data = {}
+        data["scraped_at"] = datetime.datetime.now()
         data["zp_id"] = self.get_zp_id(post)
         if self.is_zp_id_in_db(data["zp_id"]):
             return None
@@ -132,6 +138,16 @@ class Scraper:
         Given a post, return the ZP ID of the property.
         """
         return post.get("data-id")
+
+    def upsert_property(self, property_data):
+        """
+        Given a dictionary with the data of a property, insert it into the MongoDB database.
+        If the property is already in the database, update it.
+        """
+        zp_id = property_data["zp_id"]
+        self.db_client.collection.update_one(
+            {"zp_id": zp_id}, {"$set": property_data}, upsert=True
+        )
 
     def extract_first_element(self, post, label):
         """
