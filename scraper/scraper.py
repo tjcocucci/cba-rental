@@ -1,5 +1,7 @@
 import os
+import sys
 import re
+import requests
 import cloudscraper
 import datetime
 from bs4 import BeautifulSoup
@@ -10,6 +12,8 @@ MONGO_URL = "mongodb://root:rootpassword@localhost:27017/"
 
 PAGE_URL_SUFFIX = "-pagina-"
 HTML_EXTENSION = ".html"
+
+EXCHANGE_RATE_API_URL = "https://dolarapi.com/v1/dolares/blue"
 
 PAGES_HARD_LIMIT = 200
 
@@ -22,8 +26,8 @@ FEATURE_UNIT_DICT = {
 }
 
 MATCHER_DICT = {
-    "rental_data": "div[data-qa='POSTING_CARD_PRICE']",
-    "expenses_data": "div[data-qa='expensas']",
+    "rental": "div[data-qa='POSTING_CARD_PRICE']",
+    "expenses": "div[data-qa='expensas']",
     "address": "div[class*='LocationAddress']",
     "location": "h2[data-qa='POSTING_CARD_LOCATION']",
     "features": "h3[data-qa='POSTING_CARD_FEATURES']",
@@ -38,10 +42,13 @@ CURRENCY_DICT = {
 DATA_COLUMNS = [
     "zp_id",
     "scraped_at",
-    "rental_data_price",
-    "rental_data_currency",
-    "expenses_data_price",
-    "expenses_data_currency",
+    "rental_price_original",
+    "rental_currency_original",
+    "rental_price_usd_normalized",
+    "expenses_price_original",
+    "expenses_currency_original",
+    "expenses_price_usd_normalized",
+    "usd_buy_price",
     "address",
     "location",
     "square_meters_area",
@@ -64,6 +71,11 @@ class Scraper:
             os.makedirs("data_csvs")
         with open(self.data_filename, "w+") as file:
             file.write(",".join(DATA_COLUMNS) + "\n")
+        try:
+            self.current_usd_to_ars_exchange_rate = self.get_usd_to_ars_exchange_rate()
+        except Exception as e:
+            print(f"Error getting exchange rate: {e}")
+            sys.exit(1)
 
     def scrap_all_pages(self):
         """
@@ -123,8 +135,8 @@ class Scraper:
         if self.is_zp_id_in_db(data["zp_id"]):
             return None
 
-        data |= self.get_price(post, "rental_data")
-        data |= self.get_price(post, "expenses_data")
+        data |= self.get_price(post, "rental")
+        data |= self.get_price(post, "expenses")
         data["address"] = self.extract_text(post, "address")
         data["location"] = self.extract_text(post, "location")
         data |= self.get_features(post)
@@ -185,7 +197,16 @@ class Scraper:
         """
         price_text = self.extract_text(post, label)
         price, currency = self.get_quantity_and_currency(price_text)
-        return {f"{label}_price": price, f"{label}_currency": currency}
+        usd_normalized_price = (
+            price
+            if currency == "USD"
+            else price / self.current_usd_to_ars_exchange_rate
+        )
+        return {
+            f"{label}_price_original": price,
+            f"{label}_currency_original": currency,
+            f"{label}_price_usd_normalized": usd_normalized_price,
+        }
 
     def get_quantity_and_currency(self, text):
         """
@@ -236,3 +257,11 @@ class Scraper:
             if currency_symbol in text:
                 return currency
         return None
+
+    def get_usd_to_ars_exchange_rate(self):
+        """
+        Get the current exchange rate from USD to ARS.
+        """
+        response = requests.get(EXCHANGE_RATE_API_URL)
+        data = response.json()
+        return data["compra"]
