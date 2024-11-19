@@ -3,4 +3,4 @@ data.csv
 data/
 **/data_csvs/
 **/__pycache__/
-**/.env
+**/.env*

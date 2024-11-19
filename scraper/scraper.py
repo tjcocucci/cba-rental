@@ -7,9 +7,19 @@ import datetime
 from bs4 import BeautifulSoup
 from database import DataBaseClient
 from geolocator import GeoLocator
+from dotenv import dotenv_values
 
-MONGO_URL = "mongodb://root:rootpassword@localhost:27017/"
-DB_NAME = "cba_rent"
+
+config = dotenv_values(".env")
+user = config["MONGO_USERNAME"]
+password = config["MONGO_PASSWORD"]
+host = config["MONGO_HOST"]
+port = config["MONGO_PORT"]
+
+MONGO_URL = f"mongodb://{user}:{password}@{host}:{port}/"
+
+
+DB_NAME = config["DB_NAME"]
 
 PAGE_URL_SUFFIX = "-pagina-"
 HTML_EXTENSION = ".html"

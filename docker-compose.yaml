@@ -10,9 +10,29 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpassword
       MONGO_INITDB_DATABASE: cba_rent
+    networks:
+      - cba_rent
 
   scraper:
     build:
-      context: .
+      context: ./scraper
       dockerfile: Dockerfile
     entrypoint: ["tail", "-f", "/dev/null"]
+    depends_on:
+      - mongodb
+    networks:
+      - cba_rent
+
+  api:
+    build:
+      context: ./api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - cba_rent
+
+networks:
+  cba_rent:
