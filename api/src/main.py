@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from dotenv import dotenv_values
 from pymongo import MongoClient
-from routes import router as property_router
+from routes import router as properties_router
 
 config = dotenv_values(".env")
 user = config["MONGO_USERNAME"]
@@ -27,4 +27,4 @@ def shutdown_db_client():
     app.mongodb_client.close()
 
 
-app.include_router(property_router, tags=["properties"], prefix="/property")
+app.include_router(properties_router, tags=["properties"], prefix="/properties")
