@@ -9,6 +9,7 @@ from database import DataBaseClient
 from geolocator import GeoLocator
 
 MONGO_URL = "mongodb://root:rootpassword@localhost:27017/"
+DB_NAME = "cba_rent"
 
 PAGE_URL_SUFFIX = "-pagina-"
 HTML_EXTENSION = ".html"
@@ -65,7 +66,7 @@ class Scraper:
     def __init__(self, base_url):
         self.base_url = base_url
         self.data_filename = f"data_csvs/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_data.csv"
-        self.db_client = DataBaseClient(MONGO_URL)
+        self.db_client = DataBaseClient(MONGO_URL, DB_NAME)
         self.geolocator = GeoLocator()
         if not os.path.exists("data_csvs"):
             os.makedirs("data_csvs")

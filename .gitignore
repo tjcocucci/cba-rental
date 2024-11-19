@@ -1,4 +1,4 @@
-.venv/
+.venv**/
 data.csv
 data/
 **/data_csvs/
