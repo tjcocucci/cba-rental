@@ -151,6 +151,7 @@ class Scraper:
         data["address"] = self.extract_text(post, "address")
         data["location"] = self.extract_text(post, "location")
         data |= self.get_features(post)
+        data["usd_buy_price"] = self.current_usd_to_ars_exchange_rate
         data |= self.geolocator.get_coordinates(
             data["address"] + " " + data["location"]
         )
