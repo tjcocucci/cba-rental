@@ -72,7 +72,7 @@ const Histogram: React.FC<HistogramProps> = ({
       .attr("height", (d) => y(0) - y(d.value))
       .attr("width", x.bandwidth())
       .attr("fill", barColor)
-      .on("mouseover", function (_, d) {
+      .on("mouseover", function () {
         d3.select(this).attr("fill", "orange"); // Highlight bar
         tooltip.style("display", null); // Show tooltip group
       })
