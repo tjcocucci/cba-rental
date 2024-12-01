@@ -32,3 +32,9 @@ class Property(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
+
+
+class AveragePricePerRoom(BaseModel):
+    avg_price_per_room: float
+    total_rooms: int
+    

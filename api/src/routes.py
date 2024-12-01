@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException, status
+from fastapi.responses import JSONResponse
 from bson import ObjectId
-from typing import List
+from typing import List, Dict
 from models import Property
 
 router = APIRouter()
@@ -27,3 +28,35 @@ def find_property(id: str, request: Request):
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, detail=f"Property with ID {id} not found"
     )
+
+
+@router.get("/stats/per-room", response_model=List[Dict])
+async def get_average_price_per_room(request: Request):
+    """
+    Returns statistics for properties grouped by number of rooms:
+    - Average rental price
+    - Number of rooms
+    - Count of properties participating in the average
+    """
+   
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$rooms",
+                "average_price": {"$avg": "$rental_price_usd_normalized"},
+                "property_count": {"$sum": 1},
+            }
+        },
+        {
+            "$project": {
+                "rooms": "$_id",
+                "average_price": 1,
+                "property_count": 1,
+                "_id": 0,
+            }
+        },
+        {"$sort": {"rooms": 1}},
+    ]
+    data = list(request.app.database["properties"].aggregate(pipeline))
+    return JSONResponse(content=data)
+
