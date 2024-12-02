@@ -30,7 +30,7 @@ const RoomsPieChart = () => {
       value: (d.property_count / totalProperties!) * 100,
     }));
 
-  return <PieChart data={pieChartData} width={400} height={400} />;
+  return <PieChart data={pieChartData}  />;
 };
 
 export default RoomsPieChart;

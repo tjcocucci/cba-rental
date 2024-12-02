@@ -133,7 +133,14 @@ const Histogram: React.FC<HistogramProps> = ({
       .text(yLabel);
   }, [data, width, height, xLabel, yLabel, barColor, margin]);
 
-  return <svg ref={svgRef}></svg>;
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="xMidYMid meet"
+      className="flex-1 w-60 h-full w-full h-full"
+      ref={svgRef}
+    ></svg>
+  );
 };
 
 export default Histogram;

@@ -11,6 +11,7 @@ interface PieChartProps {
   showList?: boolean; // Optional list of values
   tinyThreshold?: number; // Threshold for tiny categories (as a percentage)
   otherLabel?: string; // Label for grouped tiny categories
+  margin?: { top: number; right: number; bottom: number; left: number }; // Margins for spacing
 }
 
 const PieChart: React.FC<PieChartProps> = ({
@@ -21,6 +22,7 @@ const PieChart: React.FC<PieChartProps> = ({
   showList = true,
   tinyThreshold = 5, // Default to group categories <5% as "Other"
   otherLabel = "Other",
+  margin = { top: 10, right: 10, bottom: 10, left: 10 },
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -40,7 +42,9 @@ const PieChart: React.FC<PieChartProps> = ({
   }
 
   useEffect(() => {
-    const radius = Math.min(width, height) / 2;
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
+    const radius = Math.min(chartWidth, chartHeight) / 2;
 
     const svg = d3
       .select(svgRef.current)
@@ -52,7 +56,12 @@ const PieChart: React.FC<PieChartProps> = ({
     const chartGroup = d3
       .select(svgRef.current)
       .append("g")
-      .attr("transform", `translate(${width / 2}, ${height / 2})`);
+      .attr(
+        "transform",
+        `translate(${margin.left + chartWidth / 2}, ${
+          margin.top + chartHeight / 2
+        })`
+      );
 
     const pie = d3
       .pie<{ key: number | string; value: number }>()
@@ -103,20 +112,24 @@ const PieChart: React.FC<PieChartProps> = ({
     return () => {
       d3.select(svgRef.current).selectAll("*").remove(); // Cleanup on unmount
     };
-  }, [largeCategories, width, height, colors, hoveredIndex, total]);
+  }, [largeCategories, width, height, margin, colors, hoveredIndex, total]);
 
   return (
-    <div style={{ display: "flex", alignItems: "center" }}>
-      <svg ref={svgRef}></svg>
+    <div className="flex flex-row items-start gap-6">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+        className="flex-1 w-60 h-full w-full h-full"
+        ref={svgRef}
+      ></svg>
       {showList && (
-        <ul style={{ marginLeft: "20px" }}>
+        <ul className="flex-1 w-40 h-full bg-gray-100 list-none rounded-lg p-5 m-0">
           {largeCategories.map((d, i) => (
             <li
               key={i}
-              style={{
-                color: hoveredIndex === i ? "steelblue" : "black",
-                fontWeight: hoveredIndex === i ? "bold" : "normal",
-              }}
+              className={`mb-1 ${
+                hoveredIndex === i ? "text-blue-600 font-bold" : "text-black"
+              }`}
               onMouseOver={() => setHoveredIndex(i)}
               onMouseOut={() => setHoveredIndex(null)}
             >
