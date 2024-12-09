@@ -26,7 +26,7 @@ const RoomsPieChart = () => {
   const pieChartData = (data || [])
     .filter((d: { rooms: number | null }) => d.rooms !== null)
     .map((d: { rooms: number; property_count: number }) => ({
-      key: d.rooms,
+      key: `${d.rooms} rooms`,
       value: (d.property_count / totalProperties!) * 100,
     }));
 

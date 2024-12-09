@@ -22,7 +22,7 @@ const PieChart: React.FC<PieChartProps> = ({
   showList = true,
   tinyThreshold = 5, // Default to group categories <5% as "Other"
   otherLabel = "Other",
-  margin = { top: 10, right: 10, bottom: 10, left: 10 },
+  margin = { top: 50, right: 50, bottom: 50, left: 50 },
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -46,8 +46,7 @@ const PieChart: React.FC<PieChartProps> = ({
     const chartHeight = height - margin.top - margin.bottom;
     const radius = Math.min(chartWidth, chartHeight) / 2;
 
-    const svg = d3
-      .select(svgRef.current)
+    d3.select(svgRef.current)
       .attr("width", width)
       .attr("height", height)
       .select("g")
@@ -78,36 +77,75 @@ const PieChart: React.FC<PieChartProps> = ({
       .range(colors);
 
     const slices = chartGroup
-      .selectAll("path")
+      .selectAll("g.slice")
       .data(pie(largeCategories))
-      .join("path")
+      .join("g")
+      .attr("class", "slice")
+      .on("mouseover", function (event, d) {
+        setHoveredIndex(d.index);
+        d3.select(this)
+          .raise()
+          .select("path")
+          .attr("stroke-width", 4)
+          .transition()
+          .duration(200)
+          .attr(
+            "d",
+            d3
+              .arc()
+              .innerRadius(0)
+              .outerRadius(radius + 10)
+          );
+
+        const percentage = ((d.data.value / total) * 100).toFixed(2);
+        const [x, y] = arc.centroid(d);
+        d3.select(this)
+          .select("g.tooltip")
+          .attr("transform", `translate(${x - 50}, ${y - 25})`)
+          .style("opacity", 1)
+          .raise();
+        d3.select(this).select("text").text(`${d.data.key}: ${percentage}%`);
+      })
+      .on("mouseout", function () {
+        setHoveredIndex(null);
+        d3.select(this)
+          .select("path")
+          .attr("stroke-width", 2)
+          .transition()
+          .duration(200)
+          .attr("d", arc);
+
+        d3.select(this).select("g.tooltip").style("opacity", 0);
+      });
+
+    slices
+      .append("path")
       .attr("d", arc)
       .attr("fill", (d) => colorScale(d.data.key.toString()) || "gray")
       .attr("stroke", "white")
-      .attr("stroke-width", 2)
-      .on("mouseover", (_, i) => setHoveredIndex(i.index))
-      .on("mouseout", () => setHoveredIndex(null));
+      .attr("stroke-width", 2);
 
-    const tooltip = d3
-      .select(svgRef.current)
+    const tooltipGroup = slices
+      .append("g")
+      .attr("class", "tooltip")
+      .style("opacity", 0)
+      .style("pointer-events", "none");
+
+    tooltipGroup
+      .append("rect")
+      .attr("width", 100)
+      .attr("height", 50)
+      .attr("fill", "black")
+      .attr("rx", 5)
+      .attr("ry", 5);
+
+    tooltipGroup
       .append("text")
       .attr("text-anchor", "middle")
       .attr("font-size", "12px")
       .attr("fill", "white")
-      .style("opacity", 0);
-
-    slices
-      .on("mousemove", (event, d) => {
-        const percentage = ((d.data.value / total) * 100).toFixed(2);
-        tooltip
-          .text(`${d.data.key}: ${percentage}%`)
-          .attr("x", event.offsetX - 10)
-          .attr("y", event.offsetY - 10)
-          .style("opacity", 1);
-      })
-      .on("mouseout", () => {
-        tooltip.style("opacity", 0);
-      });
+      .attr("x", 50)
+      .attr("y", 25);
 
     return () => {
       d3.select(svgRef.current).selectAll("*").remove(); // Cleanup on unmount
